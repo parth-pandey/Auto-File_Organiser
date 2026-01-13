@@ -9,3 +9,8 @@ class FileInfo(BaseModel):
     size_bytes: int
     is_directory: bool
     last_modified: datetime
+
+class DirectoryScanResponse(BaseModel):
+    path: str
+    count: int
+    files: list[FileInfo]
