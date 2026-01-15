@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query
 
-from app.services.file_service import scan_directory
-from app.schemas.file import DirectoryScanResponse
+from app.services.file_service import scan_directory, plan_file_moves
+from app.schemas.file import DirectoryScanResponse, PlannedMove, PlanResponse
 from typing import Literal
 
 router = APIRouter(prefix="/files", tags=["files"])
@@ -14,7 +14,7 @@ def list_files(path: str = Query(..., description="Directory path to scan"),
 
                # Sorting parameters
                sort_by: Literal["name", "size", "last_modified"] | None = Query(None, description="Field to sort by"),
-               order: Literal["asc", "desc"] | None = Query("asc", description="Sort Order"),
+               order: Literal["asc", "desc"] = Query("asc", description="Sort Order"),
                
 
                #Filtering parameters
@@ -29,6 +29,16 @@ def list_files(path: str = Query(..., description="Directory path to scan"),
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     
+
+    # Filtering
+    if ext: 
+        raw_files = [f for f in raw_files if f["extension"] == ext]
+    if only:
+        raw_files = [f for f in raw_files if f["is_directory"] == (only == "dirs")]
+    if min_size is not None:
+       raw_files = [f for f in raw_files if f["size_bytes"] >= min_size]
+    if max_size is not None:
+       raw_files = [f for f in raw_files if f["size_bytes"] <= max_size]
     
     # Sorting
     if sort_by:
@@ -43,21 +53,27 @@ def list_files(path: str = Query(..., description="Directory path to scan"),
         elif sort_by == "last_modified":
             raw_files.sort(key=lambda file: file["last_modified"], reverse=reverse)    
     
-    
-    # Filtering
-    if ext: 
-        raw_files = [f for f in raw_files if f["extension"] == ext]
-    if only:
-        raw_files = [f for f in raw_files if f["is_directory"] == (only == "dirs")]
-    if min_size is not None:
-       raw_files = [f for f in raw_files if f["size_bytes"] >= min_size]
-    if max_size is not None:
-       raw_files = [f for f in raw_files if f["size_bytes"] <= max_size]
-    
 
 
     return {
         "path": path,
         "count": len(raw_files),
         "files": raw_files,
+    }
+
+@router.get("/plan-moves", response_model=PlanResponse)
+def plan_moves(path: str = Query(..., description="Directory path to organize")):
+    """
+    Endpoint to plan organization of files
+    """
+
+    try:
+        plan = plan_file_moves(path)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    
+    return {
+        "path": path,
+        "count": len(plan),
+        "moves": plan
     }

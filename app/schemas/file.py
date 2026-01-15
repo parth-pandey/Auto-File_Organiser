@@ -14,3 +14,13 @@ class DirectoryScanResponse(BaseModel):
     path: str
     count: int
     files: list[FileInfo]
+
+class PlannedMove(BaseModel):
+    source: str
+    destination: str
+    reason: str
+
+class PlanResponse(BaseModel):
+    path: str
+    count: int
+    moves: list[PlannedMove]    
