@@ -9,6 +9,8 @@ router = APIRouter(prefix="/files", tags=["files"])
 @router.get("", response_model=DirectoryScanResponse)
 def list_files(path: str = Query(..., description="Directory path to scan"),
                
+               #recursive scan option
+               recursive: bool = Query(False, description="Enable heirarchial scan of subdirectories"),
 
                # Sorting parameters
                sort_by: Literal["name", "size", "last_modified"] | None = Query(None, description="Field to sort by"),
@@ -23,9 +25,10 @@ def list_files(path: str = Query(..., description="Directory path to scan"),
                ):
     """Endpoint to list files in a given directory."""
     try:
-        raw_files = scan_directory(path)
+        raw_files = scan_directory(path, recursive=recursive)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    
     
     # Sorting
     if sort_by:

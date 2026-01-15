@@ -3,7 +3,7 @@ from datetime import datetime
 from app.core.config import SANDBOX_ROOT
 
 
-def scan_directory(path: str) -> list[dict]:
+def scan_directory(path: str, recursive: bool) -> list[dict]:
     """Scans the given directory and returns a list of file information dictionaries."""
     base_path = Path(path)
 
@@ -21,18 +21,26 @@ def scan_directory(path: str) -> list[dict]:
     
     results: list[dict] = []
 
-    for entry in resolved_path.iterdir():
-        stat = entry.stat()
 
-        results.append(
-            {
-                "name": entry.name,
-                "path": str(entry.resolve()),
-                "extension": entry.suffix if entry.is_file() else None,
-                "size_bytes": stat.st_size,
-                "is_directory": entry.is_dir(),
-                "last_modified": datetime.fromtimestamp(stat.st_mtime),
-            }
-        )
+    def scan(current_path: Path):
+
+        for entry in current_path.iterdir():
+
+            stat = entry.stat()
+            results.append(
+                {
+                    "name": entry.name,
+                    "path": str(entry.resolve()),
+                    "extension": entry.suffix if entry.is_file() else None,
+                    "size_bytes": stat.st_size,
+                    "is_directory": entry.is_dir(),
+                    "last_modified": datetime.fromtimestamp(stat.st_mtime),
+                }
+            )
+
+            if recursive and entry.is_dir():
+                scan(entry)
+        
     
+    scan(resolved_path)
     return results
